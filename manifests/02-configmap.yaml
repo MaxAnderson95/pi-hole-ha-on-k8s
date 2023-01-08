@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pihole-configmap
+  namespace: pihole
+data:
+  TZ: "America/New_York"
+  PIHOLE_DNS_: "8.8.8.8;8.8.4.4"

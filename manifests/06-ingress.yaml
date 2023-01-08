@@ -1,0 +1,73 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pihole-cert
+  namespace: pihole
+spec:
+  secretName: pihole-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "pihole.home.maxanderson.tech"
+  dnsNames:
+    - "pihole.home.maxanderson.tech"
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirecthttps
+  namespace: pihole
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-admin-page
+  namespace: pihole
+spec:
+  replacePathRegex:
+    regex: ^/$
+    replacement: /admin
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pihole-server-https
+  namespace: pihole
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`pihole.home.maxanderson.tech`)
+      priority: 10
+      middlewares:
+        - name: redirect-admin-page
+          namespace: pihole
+      services:
+        - name: pihole-web-svc
+          port: 80
+  tls:
+    secretName: pihole-tls
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pihole-server-http
+  namespace: pihole
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`pihole.home.maxanderson.tech`)
+      priority: 10
+      middlewares:
+        - name: redirecthttps
+          namespace: pihole
+      services:
+        - name: pihole-web-svc
+          port: 80
